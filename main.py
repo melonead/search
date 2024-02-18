@@ -1,5 +1,19 @@
 import sys
 import pygame
+from search import *
+
+# initilize
+frontier = StackFrontier()
+explored_set = ExploredSet()
+initial_state = Node(initial_state)
+frontier.add_state(initial_state)
+
+print(initial_state, frontier, explored_set)
+
+def get_key(pos, size, grid_width):
+    x = grid_width * (pos[1] / size) + pos[0]
+    x = x / size
+    return x
 
 class Grid:
 
@@ -7,10 +21,12 @@ class Grid:
         self.structure = {}
         self.dimension = dimension
         self.size = size
+        key = 0
         for x in range(0, dimension, size): # optimize: use a single loop
             for y in range(0, dimension, size):
-                self.structure[f"{x//size}:{y//size}"] = 0 # zero for empty: 1 occupied
-
+                self.structure[key] = 0 # zero for empty: 1 occupied
+                key += 1
+                
 
 class Main:
     def __init__(self):
@@ -33,32 +49,25 @@ class Main:
     def create_obstacle(self):
         # get mouse position
         mouse_pos = pygame.mouse.get_pos()
-        x = mouse_pos[0] // self.grid.size
-        y = mouse_pos[1] // self.grid.size
-        key = f"{x}:{y}"
-        # show 
+        x = (mouse_pos[0] // self.grid.size) * self.grid.size
+        y = (mouse_pos[1] // self.grid.size) * self.grid.size
+        key = get_key((x, y), self.grid.size, self.SCREEN_SIZE[0])
+        print(f'key is {key}')
         if self.left_click: # ordinary obstacle
-            try:
-                print(self.grid.structure[key])
-            except KeyError:
-                print(mouse_pos)
-                x = mouse_pos[0] // self.grid.size
-                y = mouse_pos[1] // self.grid.size
-                print(x, y)
             if self.grid.structure[key] == 0:
                 self.grid.structure[key] = 1 # occupied
-                pygame.draw.rect(self.screen, (255, 0, 0), pygame.Rect(x * self.grid.size, y * self.grid.size, self.grid.size, self.grid.size))
+                pygame.draw.rect(self.screen, (255, 0, 0), pygame.Rect(x, y, self.grid.size, self.grid.size))
         if self.right_click: # start or goal
             if self.start == None:
                 if self.grid.structure[key] == 0:
                     self.grid.structure[key] = 's'
                     self.start = True
-                    pygame.draw.rect(self.screen, (0, 0, 255), pygame.Rect(x * self.grid.size, y * self.grid.size, self.grid.size, self.grid.size))
+                    pygame.draw.rect(self.screen, (0, 0, 255), pygame.Rect(x, y, self.grid.size, self.grid.size))
             else:
                 if self.grid.structure[key] == 0 and self.goal == None:
                     self.grid.structure[key] = 'g'
                     self.goal = True
-                    pygame.draw.rect(self.screen, (0, 255, 0), pygame.Rect(x * self.grid.size, y * self.grid.size, self.grid.size, self.grid.size))
+                    pygame.draw.rect(self.screen, (0, 255, 0), pygame.Rect(x, y, self.grid.size, self.grid.size))
 
     def update(self):
         
