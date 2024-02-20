@@ -3,26 +3,32 @@
 search_type = 'dfs'
 class Node:
     
-    def __init__(self, state):
+    def __init__(self, state, action):
         self.state = state
         self.parent = None
-        # self.action = action
+        self.action = action
         # self.type = type
+
 
 class StackFrontier:
 
     def __init__(self):
         self.frontier = []
+        self.states = []
     
-    def add_state(self, state): # state is a node
-        self.frontier.append(state)
-    
-    def remove_state(self, state):
+    def add_node(self, node): # state is a node
+        self.states.append(node.state)
+        self.frontier.append(node)
+
+    def remove_node(self, state):
         if self.frontier:
             self.frontier.remove(state)
     
-    def get_state(self):
+    def get_next_node(self):
         return self.frontier[0]
+
+    def get_next_state(self):
+        return self.states[0]
 
     @property
     def size(self):
@@ -44,35 +50,41 @@ def initialize(initial_state, frontier, explored_state):
 def Result(state, actions):
     return 
 
-def get_valid_actions(state, grid):
+def get_valid_actions(node, grid, right_border):
     actions = []
-    all_actions = [-4, -3, -2, -1, 1, 2, 3, 4]
+    all_actions = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)]
     for action in all_actions:
-        if grid[state + action] != 1:
+        x = node.state[0] + action[0]
+        y = node.state[1] + action[1]
+        if (x < 0) or (y < 0) or (x >= right_border) or (y >= right_border): continue
+        if grid[(x, y)] != 1:
             actions.append(action)
     return actions
 
-def expand(state, grid, frontier, explored_set):
-    actions = get_valid_actions(state, grid)
+def expand(node, grid, stack_frontier, explored_set, size): # get the valid neighbors
+    actions = get_valid_actions(node, grid)
+
     for action in actions:
-        new_state = state + action
-        if (new_state not in frontier) and (new_state not in explored_set):
-            frontier.append(state + action)
+        x = node.state[0] + action * size
+        y = node.state[1] + action * size
+        state = f"{x}:{y}"
+        if (state not in stack_frontier.states) and (state not in explored_set.set):
+            stack_frontier.add_node(Node(state, action))
 
 
-def Search(frontier, explored_set, grid, current_state=None):
-    if frontier.size == 0:
+def Search(stack_frontier, explored_set, grid, goal_state, current_state=None):
+    if stack_frontier.size == 0:
         print('no solution found')
         return False # no solution available
     
-    current_state = frontier[0]
-    frontier.remove_state(current_state)
+    current_state = stack_frontier.frontier[0]
+    stack_frontier.remove_state(current_state)
 
-    if current_state.type == 'g':
+    if current_state == goal_state:
         return True # solution found
     # expand the state
-    expand(current_state, grid, frontier)
-    explored_set.add(current_state)
+    expand(current_state, grid, stack_frontier, explored_set)
+    explored_set.set.add(current_state)
 
 
 
