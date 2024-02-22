@@ -25,7 +25,7 @@ class StackFrontier:
             self.frontier.remove(state)
     
     def get_next_node(self):
-        return self.frontier[0]
+        return self.frontier[-1]
 
 
     @property
@@ -35,7 +35,7 @@ class StackFrontier:
 class QueueFrontier(StackFrontier):
 
     def get_next_node(self):
-        return self.frontier[-1]
+        return self.frontier[0]
     
     
 class ExploredSet:
@@ -51,8 +51,6 @@ def initialize(initial_state, frontier, explored_state):
     initial_state = Node(initial_state)
     frontier.add_state(initial_state)
 
-def Result(state, actions):
-    return 
 
 def get_valid_actions(node, grid, right_border):
     actions = []
@@ -65,15 +63,6 @@ def get_valid_actions(node, grid, right_border):
             actions.append(action)
     return actions
 
-def expand(node, grid, stack_frontier, explored_set, size): # get the valid neighbors
-    actions = get_valid_actions(node, grid)
-
-    for action in actions:
-        x = node.state[0] + action * size
-        y = node.state[1] + action * size
-        state = f"{x}:{y}"
-        if (state not in stack_frontier.states) and (state not in explored_set.set):
-            stack_frontier.add_node(Node(state, action))
 
 def trace_back_path(node, state_space, screen, cube_size):
     while node.parent != None:
@@ -111,7 +100,7 @@ def Search(frontier, explored_set, goal_state, state_space, screen, cube_size, g
             searching = False
             path_found = True
 
-        actions = get_valid_actions(current_node, grid_structure, 30)
+        actions = get_valid_actions(current_node, grid_structure, 15)
 
         expand_node(actions, current_node, frontier, explored_set)
 
