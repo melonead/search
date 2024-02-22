@@ -42,6 +42,7 @@ class Main:
     def __init__(self):
         self.SCREEN_SIZE = (600, 600)
         self.screen = pygame.display.set_mode(self.SCREEN_SIZE, 0, 32)
+        pygame.display.set_caption('search')
         self.screen.fill('white')
         self.surface_size = (300, 300)
         self.depth_first_surface = pygame.Surface(self.surface_size)
@@ -72,6 +73,9 @@ class Main:
         x = (mouse_pos[0] // self.grid.size) * self.grid.size
         y = (mouse_pos[1] // self.grid.size) * self.grid.size
         key = get_key((x, y), self.grid.size)
+
+        if key[0] >= 15 or key[1] >= 15 or key[0] < 0 or key[1] < 0:
+            return
 
         if self.left_click: # ordinary obstacle
             if self.grid.structure[key] == 0:

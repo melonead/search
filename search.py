@@ -88,6 +88,7 @@ def Search(frontier, explored_set, goal_state, state_space, screen, cube_size, g
             print('no solution')
             searching = False
             path_found = False
+            return path_found, searching
         else:
             current_node = frontier.get_next_node()
             state_space[current_node.state] = current_node
