@@ -4,11 +4,15 @@ from search import (
     StackFrontier,
     ExploredSet,
     get_valid_actions,
-    Node
+    trace_back_path,
+    expand_node,
+    Search,
+    Node,
+    QueueFrontier
 )
 
 # initilize
-stack_frontier = StackFrontier()
+game_frontier = StackFrontier()
 explored_set = ExploredSet()
 initial_state = None
 goal_state = None
@@ -38,6 +42,9 @@ class Main:
     def __init__(self):
         self.SCREEN_SIZE = (600, 600)
         self.screen = pygame.display.set_mode(self.SCREEN_SIZE, 0, 32)
+        self.screen.fill('white')
+        self.depth_first_surface = pygame.Surface((300, 200))
+        self.breadth_first_surface = pygame.Surface((300, 200))
         self.clock = pygame.time.Clock()
         self.cube_size = 20
         self.grid = Grid(self.SCREEN_SIZE[0], self.cube_size)
@@ -80,9 +87,10 @@ class Main:
     def update(self):
         global initial_state
         global goal_state
-        global stack_frontier
+        global game_frontier
         global explored_set
         searching = False
+        path_found = False
         while True:
 
             for event in pygame.event.get():
@@ -102,51 +110,19 @@ class Main:
                         self.left_click = False
                     if event.button == 3:
                         self.right_click = False
-                
+            
             if self.click:
                 self.create_obstacle()
-                if self.goal_state != None:
+                if self.goal_state != None and not path_found:
                     searching = True
                 initial_state = self.start_state
                 goal_state = self.goal_state
-                if stack_frontier.size == 0 and initial_state != None:
-                    stack_frontier.add_node(Node(initial_state, (0, 0)))
+                if game_frontier.size == 0 and initial_state != None:
+                    game_frontier.add_node(Node(initial_state, (0, 0)))
             
             #print(self.grid.structure)
-            if goal_state != None and searching:
-                if stack_frontier.size == 0:
-                    print('no solution')
-                    searching = False
-                else:
-                    current_node = stack_frontier.get_next_node()
-                    STATE_SPACE[current_node.state] = current_node
-                    pygame.draw.rect(self.screen, (255, 0, 255), pygame.Rect(current_node.state[0] * self.cube_size, current_node.state[1] * self.cube_size, self.cube_size, self.cube_size), 3)
-
-                    if current_node.state == goal_state:
-                        print('found solution')
-                        n = current_node
-                        while n.parent != None:
-                            p_key = (n.state[0] - n.action[0], n.state[1] - n.action[1])
-                            n = STATE_SPACE[p_key]
-                            pygame.draw.rect(self.screen, (255, 255, 0), pygame.Rect(n.state[0] * self.cube_size, n.state[1] * self.cube_size, self.cube_size, self.cube_size))
-                        searching = False
-                    
-                    actions = get_valid_actions(current_node, self.grid.structure, 30)
-
-                    for action in actions:
-                        a = current_node.state[0] + action[0]
-                        b = current_node.state[1] + action[1]
-                        new_node = Node((a, b), action)
-                        new_node.parent = current_node
-                        if (new_node.state not in stack_frontier.states) and (new_node.state not in explored_set.set):
-                            stack_frontier.add_node(new_node)
-                    
-                    explored_set.set.add((a, b))
-                    stack_frontier.remove_node(current_node)
-                    
-
+            path_found, searching = Search(game_frontier, explored_set, goal_state, STATE_SPACE, self.screen, self.cube_size, self.grid.structure, searching, path_found)
                 
-
             self.draw_grid()
             pygame.display.update()
             self.clock.tick(60)
@@ -155,3 +131,12 @@ class Main:
 game = Main()
 
 game.update()
+
+
+# simultaneous display of both algorithms
+    # make obstacle
+        # display on both screens
+        # store in single grid
+    # searching
+        # use identical grid
+        # use different search algorithms

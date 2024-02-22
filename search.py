@@ -1,6 +1,6 @@
+import pygame
 # search algorithms
 
-search_type = 'dfs'
 class Node:
     
     def __init__(self, state, action):
@@ -27,12 +27,16 @@ class StackFrontier:
     def get_next_node(self):
         return self.frontier[0]
 
-    def get_next_state(self):
-        return self.states[0]
 
     @property
     def size(self):
         return len(self.frontier)
+
+class QueueFrontier(StackFrontier):
+
+    def get_next_node(self):
+        return self.frontier[-1]
+    
     
 class ExploredSet:
 
@@ -71,20 +75,51 @@ def expand(node, grid, stack_frontier, explored_set, size): # get the valid neig
         if (state not in stack_frontier.states) and (state not in explored_set.set):
             stack_frontier.add_node(Node(state, action))
 
+def trace_back_path(node, state_space, screen, cube_size):
+    while node.parent != None:
+        p_key = (node.state[0] - node.action[0], node.state[1] - node.action[1])
+        node = state_space[p_key]
+        pygame.draw.rect(screen, (255, 255, 0), pygame.Rect(node.state[0] * cube_size, node.state[1] * cube_size, cube_size, cube_size))
 
-def Search(stack_frontier, explored_set, grid, goal_state, current_state=None):
-    if stack_frontier.size == 0:
-        print('no solution found')
-        return False # no solution available
+
+def expand_node(actions, current_node, frontier, explored_set):
+    for action in actions:
+        a = current_node.state[0] + action[0]
+        b = current_node.state[1] + action[1]
+        new_node = Node((a, b), action)
+        new_node.parent = current_node
+        if (new_node.state not in frontier.states) and (new_node.state not in explored_set.set):
+            frontier.add_node(new_node)
+
+def Search(frontier, explored_set, goal_state, state_space, screen, cube_size, grid_structure, searching, path_found):
+    if not searching: return path_found, searching
     
-    current_state = stack_frontier.frontier[0]
-    stack_frontier.remove_state(current_state)
+    if goal_state != None and searching:
+        if frontier.size == 0:
+            print('no solution')
+            searching = False
+            path_found = False
+        else:
+            current_node = frontier.get_next_node()
+            state_space[current_node.state] = current_node
+            pygame.draw.rect(screen, (255, 0, 255), pygame.Rect(current_node.state[0] * cube_size, current_node.state[1] * cube_size, cube_size, cube_size), 3)
 
-    if current_state == goal_state:
-        return True # solution found
-    # expand the state
-    expand(current_state, grid, stack_frontier, explored_set)
-    explored_set.set.add(current_state)
+        if current_node.state == goal_state:
+            print('found solution still')
+            n = current_node
+            trace_back_path(n, state_space, screen, cube_size)
+            searching = False
+            path_found = True
+
+        actions = get_valid_actions(current_node, grid_structure, 30)
+
+        expand_node(actions, current_node, frontier, explored_set)
+
+        explored_set.set.add(current_node.state)
+        frontier.remove_node(current_node)
+    return path_found, searching
+
+
 
 
 
@@ -102,3 +137,7 @@ def Search(stack_frontier, explored_set, grid, goal_state, current_state=None):
         # expand the node, add resulting nodes to the frontier
         # if children/child/state(s) not in frontier and explored set
             # add children of node to frontier
+
+# To Do
+    # make stack based (depth-first) and queue based(breadth-first) run side by side
+    # create a web version
