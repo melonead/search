@@ -9,6 +9,19 @@ class Node:
         self.action = action
         # self.type = type
 
+class NodeAStar(Node):
+    def __init__(self, state, action):
+        Node.__init__(self, state, action)
+        self.h_cost = None
+        self.g_cost = None
+    
+    def compute_costs(self, initial_state, goal_state):
+        self.h_cost = abs(goal_state[0] - self.state[0]) + abs(goal_state[1] - self.state[1])
+        self.g_cost = abs(self.state[0] - initial_state[0]) + abs(self.state[1] - initial_state[1])
+    
+    def get_total_cost(self):
+        return self.h_cost + self.g_cost
+
 
 class StackFrontier:
 
@@ -31,6 +44,16 @@ class StackFrontier:
     @property
     def size(self):
         return len(self.frontier)
+    
+class AStarFrontier(StackFrontier):
+    def add_node(self, node):
+        self.states.append(node.state)
+        self.frontier.append(node)
+                    
+    def get_next_node(self):
+        return self.frontier[0]
+
+
 
 class QueueFrontier(StackFrontier):
 
@@ -42,14 +65,6 @@ class ExploredSet:
 
     def __init__(self):
         self.set = set()
-
-# initialize the frontier and explored set
-
-def initialize(initial_state, frontier, explored_state):
-    frontier = StackFrontier()
-    explored_set = ExploredSet()
-    initial_state = Node(initial_state)
-    frontier.add_state(initial_state)
 
 
 def get_valid_actions(node, grid, right_border):
@@ -65,10 +80,13 @@ def get_valid_actions(node, grid, right_border):
 
 
 def trace_back_path(node, state_space, screen, cube_size):
+    count = 0
     while node.parent != None:
         p_key = (node.state[0] - node.action[0], node.state[1] - node.action[1])
         node = state_space[p_key]
         pygame.draw.rect(screen, (255, 255, 0), pygame.Rect(node.state[0] * cube_size, node.state[1] * cube_size, cube_size, cube_size))
+        count += 1
+    return count
 
 
 def expand_node(actions, current_node, frontier, explored_set):
@@ -80,7 +98,18 @@ def expand_node(actions, current_node, frontier, explored_set):
         if (new_node.state not in frontier.states) and (new_node.state not in explored_set.set):
             frontier.add_node(new_node)
 
-def Search(frontier, explored_set, goal_state, state_space, screen, cube_size, grid_structure, searching, path_found):
+def expand_a_star_node(actions, current_node, frontier, explored_set, goal_state, initial_state):
+    for action in actions:
+        a = current_node.state[0] + action[0]
+        b = current_node.state[1] + action[1]
+        new_node = NodeAStar((a, b), action)
+        new_node.compute_costs(initial_state, goal_state)
+        new_node.parent = current_node
+        if (new_node.state not in frontier.states) and (new_node.state not in explored_set.set):
+            frontier.add_node(new_node)
+
+
+def Search(frontier, explored_set, goal_state, state_space, screen, cube_size, grid_structure, searching, path_found, name, right_border):
     if not searching: return path_found, searching
     
     if goal_state != None and searching:
@@ -92,23 +121,70 @@ def Search(frontier, explored_set, goal_state, state_space, screen, cube_size, g
         else:
             current_node = frontier.get_next_node()
             state_space[current_node.state] = current_node
+
             pygame.draw.rect(screen, (255, 0, 255), pygame.Rect(current_node.state[0] * cube_size, current_node.state[1] * cube_size, cube_size, cube_size), 3)
 
         if current_node.state == goal_state:
-            print('found solution still')
             n = current_node
-            trace_back_path(n, state_space, screen, cube_size)
+            count = trace_back_path(n, state_space, screen, cube_size)
             searching = False
             path_found = True
+            print(f'name: {name}')
+            print(f'path length: {count}')
 
-        actions = get_valid_actions(current_node, grid_structure, 15)
+        actions = get_valid_actions(current_node, grid_structure, right_border)
+
 
         expand_node(actions, current_node, frontier, explored_set)
+
 
         explored_set.set.add(current_node.state)
         frontier.remove_node(current_node)
     return path_found, searching
 
+
+def AStarSearch(frontier, explored_set, goal_state, state_space, screen, cube_size, grid_structure, searching, path_found, initial_state, name, right_border):
+    if not searching: return path_found, searching
+    if goal_state != None and searching:
+        if frontier.size == 0:
+            print('no solution')
+            searching = False
+            path_found = False
+            return path_found, searching
+        else:
+            lowest_cost = 9999999
+            current_node = frontier.get_next_node()
+            for cn in frontier.frontier:
+                if cn.get_total_cost() < lowest_cost:
+                    lowest_cost = cn.get_total_cost()
+                    current_node = cn
+
+            state_space[current_node.state] = current_node
+
+            pygame.draw.rect(screen, (255, 0, 255), pygame.Rect(current_node.state[0] * cube_size, current_node.state[1] * cube_size, cube_size, cube_size), 3)
+
+        if current_node.state == goal_state:
+            n = current_node
+            count = trace_back_path(n, state_space, screen, cube_size)
+            searching = False
+            path_found = True
+            print(f'name: {name}')
+            print(f'path length: {count}')
+
+        actions = get_valid_actions(current_node, grid_structure, right_border)
+
+        expand_a_star_node(actions, current_node, frontier, explored_set, goal_state, initial_state)
+
+        explored_set.set.add(current_node.state)
+        frontier.remove_node(current_node)
+        
+    return path_found, searching
+
+
+# A* search
+    # the expanded node is the one with the lowest cost
+    # node has h(c) heuristic cost
+    # node has g(c) cost from initial state
 
 
 
@@ -130,4 +206,5 @@ def Search(frontier, explored_set, goal_state, state_space, screen, cube_size, g
 
 # To Do
     # make stack based (depth-first) and queue based(breadth-first) run side by side
+    # add A* search algorithm
     # create a web version
