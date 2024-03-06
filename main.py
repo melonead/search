@@ -21,14 +21,40 @@ a_star_explored_set = ExploredSet()
 initial_state = None
 goal_state = None
 
+BREADTH_STATE_SPACE = {}
+DEPTH_STATE_SPACE = {}
+A_STAR_STATE_SPACE = {}
+
+def reset_vars():
+    global initial_state
+    global goal_state
+    global breadth_explored_set
+    global depth_explored_set
+    global a_star_explored_set
+    global depth_frontier
+    global breadth_frontier
+    global a_star_frontier
+    global BREADTH_STATE_SPACE
+    global DEPTH_STATE_SPACE
+    global A_STAR_STATE_SPACE
+    depth_frontier = StackFrontier()
+    breadth_frontier = QueueFrontier()
+    a_star_frontier = AStarFrontier()
+    breadth_explored_set = ExploredSet()
+    depth_explored_set = ExploredSet()
+    a_star_explored_set = ExploredSet()
+    initial_state = None
+    goal_state = None
+
+    BREADTH_STATE_SPACE = {}
+    DEPTH_STATE_SPACE = {}
+    A_STAR_STATE_SPACE = {}
+
 
 def get_key(pos, size):
     
     return pos[0] // size, pos[1] // size
 
-BREADTH_STATE_SPACE = {}
-DEPTH_STATE_SPACE = {}
-A_STAR_STATE_SPACE = {}
 
 class Grid:
 
@@ -55,7 +81,7 @@ class Main:
         self.breadth_first_surface = pygame.Surface(self.surface_size)
         self.a_star_surface = pygame.Surface(self.surface_size)
         self.clock = pygame.time.Clock()
-        self.cube_size = 10
+        self.cube_size = 20
         self.grid = Grid(self.surface_size[0], self.cube_size)
         self.left_click = False
         self.right_click = False
@@ -66,6 +92,11 @@ class Main:
         # compute the displacement of each surface from the first
         self.displacement1 = (self.SCREEN_SIZE[0] // 2) + 5, 0
         self.displacement2 = 0, (self.SCREEN_SIZE[1] // 2) + 5
+    
+    def reset(self):
+        self.grid = Grid(self.surface_size[0], self.cube_size)
+        self.goal_state = None
+        self.start_state = None
     
     def draw_grid(self):
 
@@ -125,6 +156,8 @@ class Main:
         a_star_path_found = False
         a_star_searching = False
 
+        reset = False
+
         while True:
 
             for event in pygame.event.get():
@@ -144,7 +177,29 @@ class Main:
                         self.left_click = False
                     if event.button == 3:
                         self.right_click = False
+                
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_r:
+                        reset = True
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_r:
+                        reset = False
             
+            # RESET TO INITIAL STATE   
+            if reset:
+                self.screen.fill((255, 255, 255))
+                self.depth_first_surface.fill((0, 0, 0))
+                self.breadth_first_surface.fill((0, 0, 0))
+                self.a_star_surface.fill((0, 0, 0))
+                reset_vars()
+                self.reset()
+                breadth_searching = False
+                depth_searching = False
+                breadth_path_found = False
+                depth_path_found = False
+                a_star_path_found = False
+                a_star_searching = False
+
             if self.click:
                 self.create_obstacle()
                 if self.goal_state != None and not breadth_path_found and not depth_path_found:
@@ -161,12 +216,10 @@ class Main:
                     depth_frontier.add_node(Node(initial_state, (0, 0)))
 
                 if a_star_frontier.size == 0 and initial_state != None and goal_state != None:
-                    print(initial_state, goal_state)
                     i_n = NodeAStar(initial_state, (0, 0))
                     i_n.compute_costs(initial_state, goal_state)
                     a_star_frontier.add_node(i_n)
             
-            #print(self.grid.structure)
             breadth_path_found, breadth_searching = Search(breadth_frontier, breadth_explored_set, goal_state, BREADTH_STATE_SPACE, self.breadth_first_surface, self.cube_size, self.grid.structure, breadth_searching, breadth_path_found, 'breadth first', self.right_border)
             depth_path_found, depth_searching = Search(depth_frontier, depth_explored_set, goal_state, DEPTH_STATE_SPACE, self.depth_first_surface, self.cube_size, self.grid.structure, depth_searching, depth_path_found, 'depth first', self.right_border)
             a_star_path_found, a_star_searching = AStarSearch(a_star_frontier, a_star_explored_set, goal_state, A_STAR_STATE_SPACE, self.a_star_surface, self.cube_size, self.grid.structure, a_star_searching, a_star_path_found, initial_state, 'A star', self.right_border)

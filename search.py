@@ -143,6 +143,26 @@ def Search(frontier, explored_set, goal_state, state_space, screen, cube_size, g
     return path_found, searching
 
 
+def heuristic(frontier):
+    lowest_cost = 9999999
+    
+    for cn in frontier.frontier:
+        if cn.get_total_cost() < lowest_cost:
+            lowest_cost = cn.get_total_cost()
+
+    lowest_cost_nodes = []
+    for cn in frontier.frontier:
+        if cn.get_total_cost() == lowest_cost:
+            lowest_cost_nodes.append(cn)
+    
+    lowest_h_cost = 99999
+    for cn in lowest_cost_nodes:
+        if cn.h_cost < lowest_h_cost:
+            lowest_h_cost = cn.h_cost
+            current_node = cn
+    return current_node
+
+
 def AStarSearch(frontier, explored_set, goal_state, state_space, screen, cube_size, grid_structure, searching, path_found, initial_state, name, right_border):
     if not searching: return path_found, searching
     if goal_state != None and searching:
@@ -152,12 +172,7 @@ def AStarSearch(frontier, explored_set, goal_state, state_space, screen, cube_si
             path_found = False
             return path_found, searching
         else:
-            lowest_cost = 9999999
-            current_node = frontier.get_next_node()
-            for cn in frontier.frontier:
-                if cn.get_total_cost() < lowest_cost:
-                    lowest_cost = cn.get_total_cost()
-                    current_node = cn
+            current_node = heuristic(frontier)
 
             state_space[current_node.state] = current_node
 
@@ -185,11 +200,6 @@ def AStarSearch(frontier, explored_set, goal_state, state_space, screen, cube_si
     # the expanded node is the one with the lowest cost
     # node has h(c) heuristic cost
     # node has g(c) cost from initial state
-
-
-
-
-
 
 # initialize frontier, start state the one only in frontier
 # initialize an empty explored set
