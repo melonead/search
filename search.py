@@ -235,69 +235,6 @@ bs = Breadth(QueueFrontier(), ExploredSet(), "Breadth first")
 ds = Depth(StackFrontier(), ExploredSet(), "Depth first")
 astar = AStar(AStarFrontier(), ExploredSet(), "A-Star search")
 
-
-
-
-
-
-
-
-
-def heuristic(frontier):
-    lowest_cost = 9999999
-    
-    for cn in frontier.frontier:
-        if cn.get_total_cost() < lowest_cost:
-            lowest_cost = cn.get_total_cost()
-
-    lowest_cost_nodes = []
-    for cn in frontier.frontier:
-        if cn.get_total_cost() == lowest_cost:
-            lowest_cost_nodes.append(cn)
-    
-    lowest_h_cost = 99999
-    for cn in lowest_cost_nodes:
-        if cn.h_cost < lowest_h_cost:
-            lowest_h_cost = cn.h_cost
-            current_node = cn
-    return current_node
-
-
-def AStarSearch(astar, search_vars, screen, cube_size, grid_structure, name, right_border):
-    if not astar.searching: return astar.path_found, astar.searching
-    if search_vars.goal_state != None and astar.searching:
-        if astar.frontier.size == 0:
-            print('no solution')
-            astar.searching = False
-            astar.path_found = False
-            return astar.path_found, astar.searching
-        else:
-            current_node = heuristic(astar.frontier)
-
-            astar.state_space[current_node.state] = current_node
-
-            pygame.draw.rect(screen, (255, 0, 255), pygame.Rect(current_node.state[0] * cube_size, current_node.state[1] * cube_size, cube_size, cube_size), 3)
-         
-        if current_node.state == search_vars.goal_state:
-            n = current_node
-            #uncomment upon implementation
-            #count = trace_back_path(n, astar.state_space, screen, cube_size)
-            astar.searching = False
-            astar.path_found = True
-            print(f'name: {name}')
-            #print(f'path length: {count}')
-
-        # uncomment upon implementation
-        #actions = get_valid_actions(current_node, grid_structure, right_border)
-
-        #expand_a_star_node(actions, current_node, astar.frontier, astar.explored_set, search_vars.goal_state, search_vars.initial_state)
-
-        astar.explored_set.set.add(current_node.state)
-        astar.frontier.remove_node(current_node)
-        
-    return astar.path_found, astar.searching
-
-
 # A* search
     # the expanded node is the one with the lowest cost
     # node has h(c) heuristic cost
