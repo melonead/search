@@ -1,63 +1,7 @@
 import sys
 import pygame
-from search import (
-    StackFrontier,
-    ExploredSet,
-    Search,
-    Node,
-    QueueFrontier,
-    AStarFrontier,
-    NodeAStar,
-    AStarSearch
-)
+from search import (bs, ds, astar, Node, NodeAStar)
 
-class Depth:
-    def __init__(self):
-        # store the node of the current node to be explored in depth search
-        self.frontier = StackFrontier()
-        self.state_space = {}
-        self.explored_set = ExploredSet()
-        self.path_found = False
-        self.searching = False
-    
-    def reset(self):
-        self.frontier = StackFrontier()
-        self.state_space = {}
-        self.explored_set = ExploredSet()
-        self.path_found = False
-        self.searching = False
-
-class Breadth:
-    def __init__(self):
-        # store the node of the current node to be explored in breadth search 
-        self.frontier = QueueFrontier()
-        self.state_space = {}
-        self.explored_set = ExploredSet()
-        self.path_found = False
-        self.searching = False
-    
-    def reset(self):
-        self.frontier = QueueFrontier()
-        self.state_space = {}
-        self.explored_set = ExploredSet()
-        self.path_found = False
-        self.searching = False
-
-class AStar:
-    def __init__(self):
-        # store the node of the current node to be explored in a star search
-        self.frontier = AStarFrontier()
-        self.state_space = {}
-        self.explored_set = ExploredSet()
-        self.path_found = False
-        self.searching = False
-    
-    def reset(self):
-        self.frontier = AStarFrontier()
-        self.state_space = {}
-        self.explored_set = ExploredSet()
-        self.path_found = False
-        self.searching = False
 
 class SearchVars:
 
@@ -168,9 +112,6 @@ class Main:
     def update(self):
 
         search_vars = SearchVars()
-        depth = Depth()
-        breadth = Breadth()
-        a_star = AStar()
         reset = False
 
         while True:
@@ -206,34 +147,35 @@ class Main:
                 self.depth_first_surface.fill((0, 0, 0))
                 self.breadth_first_surface.fill((0, 0, 0))
                 self.a_star_surface.fill((0, 0, 0))
-                breadth.reset()
-                depth.reset()
-                a_star.reset()
+                bs.reset()
+                ds.reset()
+                astar.reset()
+                #a_star.reset()
                 self.reset()
 
             if self.click:
                 self.create_obstacle()
-                if self.goal_state != None and not breadth.path_found and not depth.path_found:
-                    breadth.searching = True
-                    depth.searching = True
-                    a_star.searching = True
+                if self.goal_state != None and not bs.path_found and not ds.path_found:
+                    bs.searching = True
+                    ds.searching = True
+                    astar.searching = True
 
                 search_vars.initial_state = self.start_state
                 search_vars.goal_state = self.goal_state
-                if breadth.frontier.size == 0 and search_vars.initial_state != None:
-                    breadth.frontier.add_node(Node(search_vars.initial_state, (0, 0)))
+                if bs.frontier.size == 0 and search_vars.initial_state != None:
+                    bs.frontier.add_node(Node(search_vars.initial_state, (0, 0)))
                 
-                if depth.frontier.size == 0 and search_vars.initial_state != None:
-                    depth.frontier.add_node(Node(search_vars.initial_state, (0, 0)))
+                if ds.frontier.size == 0 and search_vars.initial_state != None:
+                    ds.frontier.add_node(Node(search_vars.initial_state, (0, 0)))
 
-                if a_star.frontier.size == 0 and search_vars.initial_state != None and search_vars.goal_state != None:
+                if astar.frontier.size == 0 and search_vars.initial_state != None and search_vars.goal_state != None:
                     i_n = NodeAStar(search_vars.initial_state, (0, 0))
                     i_n.compute_costs(search_vars.initial_state, search_vars.goal_state)
-                    a_star.frontier.add_node(i_n)
+                    astar.frontier.add_node(i_n)
             
-            breadth.path_found, breadth.searching = Search(breadth, search_vars, self.breadth_first_surface, self.cube_size, self.grid.structure, 'breadth first', self.right_border)
-            depth.path_found, depth.searching = Search(depth, search_vars, self.depth_first_surface, self.cube_size, self.grid.structure, 'depth first', self.right_border)
-            a_star.path_found, a_star.searching = AStarSearch(a_star, search_vars, self.a_star_surface, self.cube_size, self.grid.structure, 'A star', self.right_border)
+            bs.search(search_vars, self.breadth_first_surface, self.cube_size, self.grid.structure, self.right_border)
+            ds.search(search_vars, self.depth_first_surface, self.cube_size, self.grid.structure, self.right_border)
+            astar.search(search_vars, self.a_star_surface, self.cube_size, self.grid.structure, self.right_border)
                 
             self.draw_grid()
             self.screen.blit(self.breadth_first_surface, (0, 0))

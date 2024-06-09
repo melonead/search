@@ -66,82 +66,181 @@ class ExploredSet:
     def __init__(self):
         self.set = set()
 
-
-def get_valid_actions(node, grid, right_border):
-    actions = []
-    all_actions = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)]
-    for action in all_actions:
-        x = node.state[0] + action[0]
-        y = node.state[1] + action[1]
-        if (x < 0) or (y < 0) or (x >= right_border) or (y >= right_border): continue
-        if grid[(x, y)] != 1:
-            actions.append(action)
-    return actions
-
-
-def trace_back_path(node, state_space, screen, cube_size):
-    count = 0
-    while node.parent != None:
-        p_key = (node.state[0] - node.action[0], node.state[1] - node.action[1])
-        node = state_space[p_key]
-        pygame.draw.rect(screen, (255, 255, 0), pygame.Rect(node.state[0] * cube_size, node.state[1] * cube_size, cube_size, cube_size))
-        count += 1
-    return count
-
-
-def expand_node(actions, current_node, frontier, explored_set):
-    for action in actions:
-        a = current_node.state[0] + action[0]
-        b = current_node.state[1] + action[1]
-        new_node = Node((a, b), action)
-        new_node.parent = current_node
-        if (new_node.state not in frontier.states) and (new_node.state not in explored_set.set):
-            frontier.add_node(new_node)
-
-def expand_a_star_node(actions, current_node, frontier, explored_set, goal_state, initial_state):
-    for action in actions:
-        a = current_node.state[0] + action[0]
-        b = current_node.state[1] + action[1]
-        new_node = NodeAStar((a, b), action)
-        new_node.compute_costs(initial_state, goal_state)
-        new_node.parent = current_node
-        if (new_node.state not in frontier.states) and (new_node.state not in explored_set.set):
-            frontier.add_node(new_node)
-
-
-def Search(stype, search_vars, screen, cube_size, grid_structure, name, right_border):
+class BaseSearch:
+    def __init__(self, frontier, set, name):
+        # store the node of the current node to be explored in depth search
+        self.frontier = frontier
+        self.state_space = {}
+        self.explored_set = set
+        self.path_found = False
+        self.searching = False
+        self.current_node = None
+        self.actions = []
+        self.name = name
     
-    if not stype.searching: return stype.path_found, stype.searching
+    def reset(self):
+        self.frontier = None
+        self.state_space = {}
+        self.explored_set = ExploredSet()
+        self.path_found = False
+        self.searching = False
+        self.current_node = None
+        self.actions = []
     
-    if search_vars.goal_state != None and stype.searching:
-        if stype.frontier.size == 0:
-            print('no solution')
-            stype.searching = False
-            stype.path_found = False
-            return stype.path_found, stype.searching
-        else:
-            current_node = stype.frontier.get_next_node()
-            stype.state_space[current_node.state] = current_node
+    def search(self, search_vars, screen, cube_size, grid_structure, right_border):
+        if not self.searching: return 
+        if search_vars.goal_state != None and self.searching:
+            if self.frontier.size == 0:
+                print('no solution')
+                self.searching = False
+                self.path_found = False
+                return self.path_found, self.searching
+            else:
+                self.applyHeuristic()
+                self.state_space[self.current_node.state] = self.current_node
 
-            pygame.draw.rect(screen, (255, 0, 255), pygame.Rect(current_node.state[0] * cube_size, current_node.state[1] * cube_size, cube_size, cube_size), 3)
+                pygame.draw.rect(screen, (255, 0, 255), pygame.Rect(self.current_node.state[0] * cube_size, self.current_node.state[1] * cube_size, cube_size, cube_size), 3)
 
-        if current_node.state == search_vars.goal_state:
-            n = current_node
-            count = trace_back_path(n, stype.state_space, screen, cube_size)
-            stype.searching = False
-            stype.path_found = True
-            print(f'name: {name}')
-            print(f'path length: {count}')
+            if self.current_node.state == search_vars.goal_state:
+                n = self.current_node
+                count = self.trace_back_path(n, screen, cube_size)
+                self.searching = False
+                self.path_found = True
+                print(f'name: {self.name}')
+                print(f'path length: {count}')
 
-        actions = get_valid_actions(current_node, grid_structure, right_border)
+            self.compute_valid_actions(grid_structure, right_border)
+            self.expand_node()
+            self.explored_set.set.add(self.current_node.state)
+            self.frontier.remove_node(self.current_node)
+        return
+    # some algorithms have no heuristic, hence they won't override
+    # this function, others have it and they will override it.
+    def applyHeuristic(self):
+        self.current_node = self.frontier.get_next_node()
+
+    def expand_node(self):
+        for action in self.actions:
+            a = self.current_node.state[0] + action[0]
+            b = self.current_node.state[1] + action[1]
+            new_node = Node((a, b), action)
+            new_node.parent = self.current_node
+            if (new_node.state not in self.frontier.states) and (new_node.state not in self.explored_set.set):
+                self.frontier.add_node(new_node)
+
+    def compute_valid_actions(self, grid, right_border):
+        self.actions = []
+        all_actions = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)]
+        for action in all_actions:
+            x = self.current_node.state[0] + action[0]
+            y = self.current_node.state[1] + action[1]
+            if (x < 0) or (y < 0) or (x >= right_border) or (y >= right_border): continue
+            if grid[(x, y)] != 1:
+                self.actions.append(action)
+
+    def trace_back_path(self, node, screen, cube_size):
+        count = 0
+        while node.parent != None:
+            p_key = (node.state[0] - node.action[0], node.state[1] - node.action[1])
+            node = self.state_space[p_key]
+            pygame.draw.rect(screen, (255, 255, 0), pygame.Rect(node.state[0] * cube_size, node.state[1] * cube_size, cube_size, cube_size))
+            count += 1
+        return count
+    
+
+class Breadth(BaseSearch):
+
+    def __init__(self, frontier, set, name):
+        BaseSearch.__init__(self, frontier, set, name)
+    
+    def reset(self):
+        BaseSearch.reset(self)
+        self.frontier = QueueFrontier()
+
+class Depth(BaseSearch):
+
+    def __init__(self, frontier, set, name):
+        BaseSearch.__init__(self, frontier, set, name)
+    
+    def reset(self):
+        BaseSearch.reset(self)
+        self.frontier = StackFrontier()
+
+class AStar(BaseSearch):
+
+    def __init__(self, frontier, set, name):
+        BaseSearch.__init__(self, frontier, set, name)
+    
+    def reset(self):
+        BaseSearch.reset(self)
+        self.frontier = AStarFrontier()
+    
+    def expand_node(self, initial_state, goal_state):
+        for action in self.actions:
+            a = self.current_node.state[0] + action[0]
+            b = self.current_node.state[1] + action[1]
+            new_node = NodeAStar((a, b), action)
+            new_node.compute_costs(initial_state, goal_state)
+            new_node.parent = self.current_node
+            if (new_node.state not in self.frontier.states) and (new_node.state not in self.explored_set.set):
+                self.frontier.add_node(new_node)
+    
+    def search(self, search_vars, screen, cube_size, grid_structure, right_border):
+        if not self.searching: return 
+        if search_vars.goal_state != None and self.searching:
+            if self.frontier.size == 0:
+                print('no solution')
+                self.searching = False
+                self.path_found = False
+                return self.path_found, self.searching
+            else:
+                self.applyHeuristic()
+                self.state_space[self.current_node.state] = self.current_node
+
+                pygame.draw.rect(screen, (255, 0, 255), pygame.Rect(self.current_node.state[0] * cube_size, self.current_node.state[1] * cube_size, cube_size, cube_size), 3)
+
+            if self.current_node.state == search_vars.goal_state:
+                n = self.current_node
+                count = self.trace_back_path(n, screen, cube_size)
+                self.searching = False
+                self.path_found = True
+                print(f'name: {self.name}')
+                print(f'path length: {count}')
+
+            self.compute_valid_actions(grid_structure, right_border)
+            self.expand_node(search_vars.initial_state, search_vars.goal_state)
+            self.explored_set.set.add(self.current_node.state)
+            self.frontier.remove_node(self.current_node)
+        return
+    
+    def applyHeuristic(self):
+        lowest_cost = 9999999
+    
+        for cn in self.frontier.frontier:
+            if cn.get_total_cost() < lowest_cost:
+                lowest_cost = cn.get_total_cost()
+
+        lowest_cost_nodes = []
+        for cn in self.frontier.frontier:
+            if cn.get_total_cost() == lowest_cost:
+                lowest_cost_nodes.append(cn)
+        
+        lowest_h_cost = 99999
+        for cn in lowest_cost_nodes:
+            if cn.h_cost < lowest_h_cost:
+                lowest_h_cost = cn.h_cost
+                self.current_node = cn
+
+bs = Breadth(QueueFrontier(), ExploredSet(), "Breadth first")
+ds = Depth(StackFrontier(), ExploredSet(), "Depth first")
+astar = AStar(AStarFrontier(), ExploredSet(), "A-Star search")
 
 
-        expand_node(actions, current_node, stype.frontier, stype.explored_set)
 
 
-        stype.explored_set.set.add(current_node.state)
-        stype.frontier.remove_node(current_node)
-    return stype.path_found, stype.searching
+
+
+
 
 
 def heuristic(frontier):
@@ -181,15 +280,17 @@ def AStarSearch(astar, search_vars, screen, cube_size, grid_structure, name, rig
          
         if current_node.state == search_vars.goal_state:
             n = current_node
-            count = trace_back_path(n, astar.state_space, screen, cube_size)
+            #uncomment upon implementation
+            #count = trace_back_path(n, astar.state_space, screen, cube_size)
             astar.searching = False
             astar.path_found = True
             print(f'name: {name}')
-            print(f'path length: {count}')
+            #print(f'path length: {count}')
 
-        actions = get_valid_actions(current_node, grid_structure, right_border)
+        # uncomment upon implementation
+        #actions = get_valid_actions(current_node, grid_structure, right_border)
 
-        expand_a_star_node(actions, current_node, astar.frontier, astar.explored_set, search_vars.goal_state, search_vars.initial_state)
+        #expand_a_star_node(actions, current_node, astar.frontier, astar.explored_set, search_vars.goal_state, search_vars.initial_state)
 
         astar.explored_set.set.add(current_node.state)
         astar.frontier.remove_node(current_node)
